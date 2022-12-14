@@ -1,111 +1,97 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- * @flow strict-local
- */
+import React, {useState} from 'react';
+import {View, Button, StyleSheet, Text, TextInput} from 'react-native';
+import FileViewer from 'react-native-file-viewer';
+import {FullWindowOverlay} from 'react-native-screens';
+import RNFS from 'react-native-fs';
 
-import React from 'react';
-import type {Node} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+export const App = () => {
+  const [isOverlayVisible, setIsOverlayVisible] = useState(false);
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  const downloadFile = async () => {
+    const downloadUrl =
+      'https://upload.wikimedia.org/wikipedia/commons/thumb/b/b6/Image_created_with_a_mobile_phone.png/1920px-Image_created_with_a_mobile_phone.png';
 
-const Section = ({children, title}): Node => {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
+    const destinationPath = `${RNFS.DocumentDirectoryPath}/SampleImage.png`;
+    const result = await RNFS.downloadFile({
+      fromUrl: downloadUrl,
+      toFile: destinationPath,
+      begin: () => undefined,
+      progress: res => {
+        const progressPercent = (res.bytesWritten / res.contentLength) * 100;
+        console.log(`Download progress is ${progressPercent}%`);
+      },
+      progressInterval: 100,
+    }).promise;
+
+    console.log(`Donload result is ${JSON.stringify(result)}`);
+
+    const {statusCode} = result;
+
+    if (statusCode < 200 || statusCode >= 300) {
+      throw new Error(`Status code: ${statusCode}`);
+    }
+
+    return destinationPath;
+  };
+
+  const openFile = () => {
+    const path = `${RNFS.DocumentDirectoryPath}/SampleImage.png`;
+    FileViewer.open(path);
+
+    setTimeout(() => {
+      setIsOverlayVisible(true);
+    }, 2000);
+  };
+
+  const closeHover = () => {
+    setIsOverlayVisible(false);
+  };
+
+  const handleKeyDown = e => {
+    if (e.nativeEvent.key?.toLowerCase() == 'a') {
+      setIsOverlayVisible(false);
+    }
+  };
+
+  return isOverlayVisible ? (
+    <>
+      <FullWindowOverlay>
+        <View style={styles.view2}>
+          <Text>
+            This text input is interactable (press &#39;a&#39; to close the Overlay)
+          </Text>
+          <TextInput style={styles.input} onKeyPress={handleKeyDown} />
+          <Button
+            onPress={closeHover}
+            title="Click to close the Overlay (but this won't work)"
+          />
+        </View>
+      </FullWindowOverlay>
+    </>
+  ) : (
+    <View style={styles.view1}>
+      <Button onPress={downloadFile} title="1. Click to download file" />
+      <Button onPress={openFile} title="2. Click to open file viewer" />
     </View>
   );
 };
 
-const App: () => Node = () => {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-  };
-
-  return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.js</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
-};
-
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  view1: {
+    flex: 1,
+    backgroundColor: '#99FF99',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  view2: {
+    backgroundColor: '#FF9999',
+    marginVertical: 250,
+    marginHorizontal: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
-  },
-  highlight: {
-    fontWeight: '700',
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
   },
 });
 
